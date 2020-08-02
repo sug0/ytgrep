@@ -1,0 +1,10 @@
+[package]
+name = "ytgrep"
+version = "0.2.0"
+authors = ["Tiago Carvalho <sugoiuguu@tfwno.gf>"]
+edition = "2018"
+
+[dependencies]
+reqwest = "0.9.24"
+select = "0.5.0"
+url = "1.7.2"
