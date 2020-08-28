@@ -1,10 +1,14 @@
 use std::env;
-use std::io::BufReader;
+use std::io::Read;
 use std::num::NonZeroUsize;
 
 use reqwest::{Client, Response};
 use url::percent_encoding::{utf8_percent_encode, QUERY_ENCODE_SET};
-use select::{predicate::{self, Predicate}, document, node};
+
+struct Video {
+    id: String,
+    title: String,
+}
 
 fn main() {
     let page = NonZeroUsize::new(1).unwrap();
@@ -18,18 +22,56 @@ fn main() {
         .expect("failed to download youtube page");
 
     // parse the youtube page
-    let doc = document::Document::from_read(&mut BufReader::new(&mut rsp))
-        .expect("failed to parse youtube page");
+    let mut doc_str = String::new();
+    rsp.read_to_string(&mut doc_str)
+        .expect("failed to read youtube page into String");
 
     // begin scraping :^)
-    find_video_nodes(&doc, |n| {
-        let path = n.attr("href").unwrap();
-        let title = n.attr("title").unwrap();
-        println!("{} | https://www.youtube.com{}", title, path)
+    find_videos(&doc_str, |v| {
+        println!("{} | https://www.youtube.com/watch?v={}", v.title, v.id);
     })
 }
 
-#[inline]
+// stolen from https://github.com/joetats/youtube_search/blob/master/youtube_search/__init__.py
+fn find_videos<F>(doc_str: &str, f: F)
+where
+    F: Fn(Video),
+{
+    static SEARCH: &str = r#"window["ytInitialData"]"#;
+
+    let start = doc_str.find(SEARCH)
+        .map(|index| index + SEARCH.len() + 3)
+        .expect("failed to find initial data");
+    let end = doc_str[start..].find("};")
+        .map(|index| index + start + 1)
+        .expect("failed to find end index?!");
+    let videos = ajson::get(&doc_str[start..end], "contents.twoColumnSearchResultsRenderer.primaryContents.sectionListRenderer.contents.0.itemSectionRenderer.contents")
+        .map(|value| value.to_vec())
+        .expect("couldn't find videos");
+    for video_value in videos {
+        let video = match video_value {
+            ajson::Value::Object(_) => {
+                let id = video_value.get("videoRenderer.videoId")
+                    .and_then(|id| match id {
+                        ajson::Value::String(id) => Some(id),
+                        _ => None,
+                    });
+                let title = video_value.get("videoRenderer.title.runs.0.text")
+                    .and_then(|id| match id {
+                        ajson::Value::String(id) => Some(id),
+                        _ => None,
+                    });
+                match id.and_then(|id| title.and_then(|title| Some((id, title)))) {
+                    Some((id, title)) => Video { id, title },
+                    _ => continue,
+                }
+            },
+            _ => panic!("expected object, but got something else :("),
+        };
+        f(video);
+    }
+}
+
 fn query_string() -> Option<String> {
     // fetch arguments
     let args: Vec<_> = env::args()
@@ -55,23 +97,10 @@ fn query_string() -> Option<String> {
     Some(s)
 }
 
-#[inline]
-fn find_video_nodes<'a, F>(doc: &'a document::Document, process: F)
-where
-    F: Fn(node::Node<'a>),
-{
-    let pred = predicate::Name("h3").child(
-        predicate::Name("a")
-            .and(predicate::Attr("title", ()))
-            .and(predicate::Attr("dir", "ltr")),
-    );
-    doc.find(pred).for_each(process)
-}
-
 fn yt_get(page: NonZeroUsize, query: &str) -> reqwest::Result<Response> {
     static YT_BASE: &str = "https://www.youtube.com/results";
 
-    let q = format!("{}?search_query={}&page={}&disable_polymer=1",
+    let q = format!("{}?search_query={}&page={}",
         YT_BASE,
         utf8_percent_encode(query, QUERY_ENCODE_SET).to_string(),
         page.get());
