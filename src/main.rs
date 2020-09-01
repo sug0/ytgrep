@@ -26,6 +26,14 @@ fn main() {
     rsp.read_to_string(&mut doc_str)
         .expect("failed to read youtube page into String");
 
+    // ignore sig pipe
+    unsafe {
+        use nix::sys::signal;
+
+        signal::signal(signal::SIGPIPE, signal::SigHandler::SigDfl)
+            .expect("failed to ignore SIGPIPE");
+    }
+
     // begin scraping :^)
     find_videos(&doc_str, |v| {
         println!("{} | https://www.youtube.com/watch?v={}", v.title, v.id);
