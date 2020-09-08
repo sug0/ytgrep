@@ -36,7 +36,7 @@ fn main() {
 
     // begin scraping :^)
     find_videos(&doc_str, |v| {
-        println!("{} | https://www.youtube.com/watch?v={}", v.title, v.id);
+        println!("{} | https://youtu.be/{}", v.title, v.id);
     })
 }
 
