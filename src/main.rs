@@ -45,10 +45,14 @@ fn find_videos<F>(doc_str: &str, f: F)
 where
     F: Fn(Video),
 {
-    static SEARCH: &str = r#"window["ytInitialData"]"#;
+    static SEARCH: &str = "// scraper_data_begin";
+    static SEARCH2: &str = r#"window["ytInitialData"]"#;
 
     let start = doc_str.find(SEARCH)
         .map(|index| index + SEARCH.len() + 3)
+        .or_else(|| doc_str
+            .find(SEARCH2)
+            .map(|index| index + SEARCH2.len() + 21))
         .expect("failed to find initial data");
     let end = doc_str[start..].find("};")
         .map(|index| index + start + 1)
