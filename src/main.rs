@@ -45,14 +45,18 @@ fn find_videos<F>(doc_str: &str, f: F)
 where
     F: Fn(Video),
 {
-    const SEARCH: (&str, usize) = ("// scraper_data_begin", 21);
-    const SEARCH2: (&str, usize) = (r#"window["ytInitialData"]"#, 3);
+    const SEARCH1: (&str, usize) = ("var ytInitialData =", 1);
+    const SEARCH2: (&str, usize) = ("// scraper_data_begin", 21);
+    const SEARCH3: (&str, usize) = (r#"window["ytInitialData"]"#, 3);
 
-    let start = doc_str.find(SEARCH.0)
-        .map(|index| index + SEARCH.0.len() + SEARCH.1)
+    let start = doc_str.find(SEARCH1.0)
+        .map(|index| index + SEARCH1.0.len() + SEARCH1.1)
         .or_else(|| doc_str
             .find(SEARCH2.0)
             .map(|index| index + SEARCH2.0.len() + SEARCH2.1))
+        .or_else(|| doc_str
+            .find(SEARCH3.0)
+            .map(|index| index + SEARCH3.0.len() + SEARCH3.1))
         .expect("failed to find initial data");
     let end = doc_str[start..].find("};")
         .map(|index| index + start + 1)
