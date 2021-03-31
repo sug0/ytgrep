@@ -125,8 +125,10 @@ fn yt_get(page: NonZeroUsize, query: &str) -> reqwest::Result<Response> {
         .gzip(true)
         .build()?
         .get(q.as_str())
-        .header("User-Agent", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)")
+        //.header("User-Agent", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)")
+        .header("User-Agent", "AdsBot-Google (+http://www.google.com/adsbot.html)")
         .header("Host", "www.youtube.com")
+        .header("Cookie", "")
         .header("Referer", q.as_str())
         .header("Accept", "*/*")
         .header("Accept-Encoding", "gzip")

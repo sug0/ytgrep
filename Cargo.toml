@@ -1,6 +1,6 @@
 [package]
 name = "ytgrep"
-version = "0.3.1"
+version = "0.3.3"
 authors = ["Tiago Carvalho <sugoiuguu@tfwno.gf>"]
 edition = "2018"
 
