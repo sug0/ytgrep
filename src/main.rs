@@ -1,7 +1,7 @@
 use std::env;
-use std::io::Read;
 use std::borrow::Cow;
 use std::num::NonZeroUsize;
+use std::io::{self, Read, Write, BufWriter};
 
 use reqwest::{Client, Response};
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
@@ -27,24 +27,21 @@ fn main() {
     rsp.read_to_string(&mut doc_str)
         .expect("failed to read youtube page into String");
 
-    // ignore sig pipe
-    unsafe {
-        use nix::sys::signal;
-
-        signal::signal(signal::SIGPIPE, signal::SigHandler::SigDfl)
-            .expect("failed to ignore SIGPIPE");
-    }
-
     // begin scraping :^)
+    let stdout = io::stdout();
+    let mut stdout_lock = BufWriter::new(stdout.lock());
+
     find_videos(&doc_str, |v| {
-        println!("{} | https://youtu.be/{}", v.title, v.id);
-    })
+        writeln!(&mut stdout_lock, "{} | https://youtu.be/{}", v.title, v.id).is_ok()
+    });
+
+    let _ = stdout_lock.flush();
 }
 
 // stolen from https://github.com/joetats/youtube_search/blob/master/youtube_search/__init__.py
-fn find_videos<F>(doc_str: &str, f: F)
+fn find_videos<F>(doc_str: &str, mut f: F)
 where
-    F: Fn(Video),
+    F: FnMut(Video) -> bool,
 {
     const SEARCH1: (&str, usize) = ("var ytInitialData =", 1);
     const SEARCH2: (&str, usize) = ("// scraper_data_begin", 21);
@@ -85,7 +82,9 @@ where
             },
             _ => panic!("expected object, but got something else :("),
         };
-        f(video);
+        if !f(video) {
+            break;
+        }
     }
 }
 
