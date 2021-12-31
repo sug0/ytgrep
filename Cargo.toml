@@ -7,5 +7,5 @@ edition = "2018"
 [dependencies]
 percent-encoding = "2.1.0"
 reqwest = "0.9.24"
-ajson = "0.2.3"
+ajson = "0.2.4"
 nix = "0.18.0"
