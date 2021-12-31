@@ -1,5 +1,6 @@
 use std::env;
 use std::borrow::Cow;
+use std::process::exit;
 use std::num::NonZeroUsize;
 use std::io::{self, Read, Write, BufWriter};
 
@@ -12,20 +13,27 @@ struct Video {
 }
 
 fn main() {
+    if let Err(e) = run() {
+        eprintln!("{}", e);
+        exit(1);
+    }
+}
+
+fn run() -> Result<(), &'static str> {
     let page = NonZeroUsize::new(1).unwrap();
 
     // get youtube query from arguments
     let query = query_string()
-        .expect("no query string passed as argument");
+        .ok_or("Usage: ytgrep <query string> ...")?;
 
     // download youtube page
     let mut rsp = yt_get(page, &query)
-        .expect("failed to download youtube page");
+        .map_err(|_| "Error: Failed to download YouTube page")?;
 
     // parse the youtube page
     let mut doc_str = String::new();
     rsp.read_to_string(&mut doc_str)
-        .expect("failed to read youtube page into String");
+        .map_err(|_| "Error: Failed to read YouTube page into String")?;
 
     // begin scraping :^)
     let stdout = io::stdout();
@@ -33,13 +41,14 @@ fn main() {
 
     find_videos(&doc_str, |v| {
         writeln!(&mut stdout_lock, "{} | https://youtu.be/{}", v.title, v.id).is_ok()
-    });
+    })?;
 
     let _ = stdout_lock.flush();
+    Ok(())
 }
 
 // stolen from https://github.com/joetats/youtube_search/blob/master/youtube_search/__init__.py
-fn find_videos<F>(doc_str: &str, mut f: F)
+fn find_videos<F>(doc_str: &str, mut f: F) -> Result<(), &'static str>
 where
     F: FnMut(Video) -> bool,
 {
@@ -55,13 +64,13 @@ where
         .or_else(|| doc_str
             .find(SEARCH3.0)
             .map(|index| index + SEARCH3.0.len() + SEARCH3.1))
-        .expect("failed to find initial data");
+        .ok_or("Error: Failed to find JSON data start index")?;
     let end = doc_str[start..].find("};")
         .map(|index| index + start + 1)
-        .expect("failed to find end index?!");
+        .ok_or("Error: Failed to find end index of JSON data")?;
     let videos = ajson::get(&doc_str[start..end], "contents.twoColumnSearchResultsRenderer.primaryContents.sectionListRenderer.contents.0.itemSectionRenderer.contents")
         .map(|value| value.to_vec())
-        .expect("couldn't find videos");
+        .ok_or("Error: Couldn't find videos in JSON data")?;
     for video_value in videos {
         let video = match video_value {
             ajson::Value::Object(_) => {
@@ -80,12 +89,14 @@ where
                     _ => continue,
                 }
             },
-            _ => panic!("expected object, but got something else :("),
+            // expected object, but got something else... ignore
+            _ => continue,
         };
         if !f(video) {
             break;
         }
     }
+    Ok(())
 }
 
 fn query_string() -> Option<String> {
