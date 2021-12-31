@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use std::num::NonZeroUsize;
 use std::io::{self, Read, Write, BufWriter};
 
-use reqwest::{Client, Response};
+use reqwest::blocking::{Client, Response};
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 
 struct Video {
@@ -129,7 +129,7 @@ fn yt_get(page: NonZeroUsize, query: &str) -> reqwest::Result<Response> {
     Client::builder()
         .gzip(true)
         .build()?
-        .get(q.as_str())
+        .get(&q)
         .header("User-Agent", USER_AGENT)
         .header("Host", "www.youtube.com")
         .header("Cookie", "")
