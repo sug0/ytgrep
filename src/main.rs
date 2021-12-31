@@ -117,6 +117,9 @@ fn query_string() -> Option<String> {
 fn yt_get(page: NonZeroUsize, query: &str) -> reqwest::Result<Response> {
     static YT_BASE: &str = "https://www.youtube.com/results";
 
+    static USER_AGENT: &str = "AdsBot-Google (+http://www.google.com/adsbot.html)";
+    //static USER_AGENT: &str = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)";
+
     let q = utf8_percent_encode(query, NON_ALPHANUMERIC);
     let qstr: Cow<'_, str> = q.into();
     let q = format!("{}?search_query={}&page={}",
@@ -128,8 +131,7 @@ fn yt_get(page: NonZeroUsize, query: &str) -> reqwest::Result<Response> {
         .gzip(true)
         .build()?
         .get(q.as_str())
-        //.header("User-Agent", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)")
-        .header("User-Agent", "AdsBot-Google (+http://www.google.com/adsbot.html)")
+        .header("User-Agent", USER_AGENT)
         .header("Host", "www.youtube.com")
         .header("Cookie", "")
         .header("Referer", q.as_str())
