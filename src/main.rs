@@ -74,17 +74,23 @@ where
     for video_value in videos {
         let video = match video_value {
             ajson::Value::Object(_) => {
-                let id = video_value.get("videoRenderer.videoId")
-                    .and_then(|id| match id {
-                        ajson::Value::String(id) => Some(id),
-                        _ => None,
+                let id_title = video_value
+                    .get("videoRenderer.videoId")
+                    .and_then(|id| {
+                        let id = match id {
+                            ajson::Value::String(id) => id,
+                            _ => return None,
+                        };
+                        video_value
+                            .get("videoRenderer.title.runs.0.text")
+                            .and_then(|title| {
+                                match title {
+                                    ajson::Value::String(title) => Some((id, title)),
+                                    _ => None,
+                                }
+                            })
                     });
-                let title = video_value.get("videoRenderer.title.runs.0.text")
-                    .and_then(|id| match id {
-                        ajson::Value::String(id) => Some(id),
-                        _ => None,
-                    });
-                match id.and_then(|id| title.and_then(|title| Some((id, title)))) {
+                match id_title {
                     Some((id, title)) => Video { id, title },
                     _ => continue,
                 }
