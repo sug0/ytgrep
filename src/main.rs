@@ -1,9 +1,10 @@
 use std::env;
 use std::io::Read;
+use std::borrow::Cow;
 use std::num::NonZeroUsize;
 
 use reqwest::{Client, Response};
-use url::percent_encoding::{utf8_percent_encode, QUERY_ENCODE_SET};
+use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 
 struct Video {
     id: String,
@@ -116,9 +117,11 @@ fn query_string() -> Option<String> {
 fn yt_get(page: NonZeroUsize, query: &str) -> reqwest::Result<Response> {
     static YT_BASE: &str = "https://www.youtube.com/results";
 
+    let q = utf8_percent_encode(query, NON_ALPHANUMERIC);
+    let qstr: Cow<'_, str> = q.into();
     let q = format!("{}?search_query={}&page={}",
         YT_BASE,
-        utf8_percent_encode(query, QUERY_ENCODE_SET).to_string(),
+        qstr,
         page.get());
 
     Client::builder()

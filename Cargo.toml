@@ -5,7 +5,7 @@ authors = ["Tiago Carvalho <sugoiuguu@tfwno.gf>"]
 edition = "2018"
 
 [dependencies]
+percent-encoding = "2.1.0"
 reqwest = "0.9.24"
-url = "1.7.2"
 ajson = "0.2.3"
 nix = "0.18.0"
