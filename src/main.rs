@@ -123,9 +123,9 @@ fn query_string() -> Option<String> {
     let n = args.len() - 1;
 
     // join arguments with a space
-    for i in 0..n {
-        s.push_str(&args[i]);
-        s.push_str(" ")
+    for arg in args.iter().take(n) {
+        s.push_str(arg);
+        s.push(' ');
     }
     s.push_str(&args[n]);
 
